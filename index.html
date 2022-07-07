@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ownrss</title>
+
+    <script src="https://unpkg.com/alpinejs@3.10.2/dist/cdn.min.js" defer></script>
+    <script src="https://unpkg.com/rss-parser@3.12.0/dist/rss-parser.min.js"></script>
+    <script src="https://unpkg.com/jquery@3.6.0/dist/jquery.min.js"></script>
+
+    <link rel="stylesheet" href="https://unpkg.com/bulma@0.9.4/css/bulma.min.css">
+  </head>
+  <body>
+   <div class="columns">
+    <div class="column"></div>
+    <div x-data="setup()" class="column is-three-quarters" style="display:inline;">
+      <div>
+        <template x-for="(entry, index) in tags" :key="index">
+            <button :class="styleButton[index%6]" @click="setTag(entry)" x-text="entry" style="display:inline;margin: 2px 2px">
+        </template>
+      </div>
+      <template x-for="(entry, index) in sortedFeed" :key="index">
+          <span :class="styleTag[index%6]" x-show="isTagEqualBool(entry.tag)" style="display:inline;margin: 4px 6px">
+            <strong>
+              <a x-bind:href="entry.link" style="color:inherit" x-text="entry.title" target="_blank"></a>
+            </strong>
+          </span>
+      </template>
+    </div>
+    <div class="column"></div>
+    </div>
+    <script>
+      let parser = new RSSParser({
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/103.0.5060.66 Safari/537.36 Edg/103.0.1264.44))',
+            'origin':'x-requested-with'
+          }
+      }) 
+
+      function setup () {
+          return {
+              feed: [],
+              tags: [],
+              nowTag: '',
+              styleButton: [
+                'button is-primary',
+                'button is-link',
+                'button is-info',
+                'button is-success',
+                'button is-warning',
+                'button is-danger',
+              ],
+              styleTag: [
+                'tag is-primary is-medium is-light',
+                'tag is-link is-medium is-light',
+                'tag is-info is-medium is-light',
+                'tag is-success is-medium is-light',
+                'tag is-warning is-medium is-light',
+                'tag is-danger is-medium is-light'
+              ],
+
+              get (source) {
+                  const CORS_PROXY = 'https://cors.asksowhat.cn/'
+                  parser.parseURL(CORS_PROXY + source, (err, feed) => {
+                      if (err) {}
+                      feed.items.forEach(entry => {
+                          this.addToFeed(entry, feed.title)
+                      })
+                      console.log(feed)
+                  })
+              },
+
+              get sortedFeed() {
+                  return this.feed.sort((first, second) => {
+                      return second.date.getTime() - first.date.getTime()
+                  })
+              },
+
+              addToFeed (entry, tag) {
+                  this.feed.push({
+                      tag: tag,
+                      title: (entry.title).substring(0,30),
+                      link: entry.link,
+                      date: (("isoDate" in entry) ? new Date(entry.isoDate) : new Date("1970-01-01")),
+                  })
+                  if (!this.tags.includes(tag)) {
+                      this.tags.push(tag)
+                  }
+              },
+
+              init () {
+                  let ner = this
+                  $.getJSON("config.json", function(configData) {
+                      configData.sources.forEach(source => {
+                          ner.get(source)
+                      })
+                  })
+              },
+
+              setTag (tag) {
+                  this.nowTag = tag
+              },
+              isTagEqualBool (tag) {
+                  return this.nowTag == '' || this.nowTag == tag
+              }
+          }
+      }
+    </script>
+  </body>
+</html>
