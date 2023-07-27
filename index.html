@@ -103,7 +103,8 @@
         };
       },
       async created() {
-        const socket = new WebSocket("ws://" + window.location.host + "/ws");
+        const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+        const socket = new WebSocket(protocol + window.location.host + "/ws");
         socket.onmessage = event => {
           const feed = JSON.parse(event.data);
           this.feeds.push(feed);
