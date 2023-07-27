@@ -1,18 +1,12 @@
 version: "3"
 
 services:
-  ownrss:
-    image: nginx:alpine
+  server:
+    build:
+      context: .
     container_name: ownrss
     restart: always
     ports:
-      - 10016:80
+      - "10060:8080"
     volumes:
-      - $PWD/index.html:/usr/share/nginx/html/index.html
-      - $PWD/config.json:/usr/share/nginx/html/config.json
-  cors:
-    image: chrissi2812/cors-anywhere
-    container_name: cors-anywhere
-    restart: always
-    ports:
-      - 10015:8080
+      - "$PWD/index.html:/app/index.html"
