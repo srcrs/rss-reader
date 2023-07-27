@@ -2,8 +2,7 @@ version: "3"
 
 services:
   server:
-    build:
-      context: .
+    image: srcrs/rss-reader:latest
     container_name: rss-reader
     restart: always
     ports:
@@ -11,3 +10,4 @@ services:
     volumes:
       - "$PWD/index.html:/app/index.html"
       - "$PWD/db:/app/db"
+      - "$PWD/config.json:/app/config.json"
