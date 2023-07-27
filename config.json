@@ -1,11 +1,17 @@
 {
-    "sources": [
-        "https://rsshub.asksowhat.cn/v2ex/topics/latest",
-        "https://rsshub.asksowhat.cn/36kr/news/latest",
-        "https://rsshub.asksowhat.cn/aliyun/developer/group/alitech",
-        "https://rsshub.asksowhat.cn/blogread/newest",
-        "https://rsshub.asksowhat.cn/juejin/category/backend",
-        "https://rsshub.asksowhat.cn/edrawsoft/mindmap/8/PV/DESC/CN/1",
-        "https://hostloc.com/forum.php?mod=rss&amp;fid=45&amp;auth=3ba611tSbtZSmrvt5Zo2lBgahajeORVteWbX8IarKV66xIEkPiuIRFG2g5x0tQ"
+    "values": [
+        "https://www.zhihu.com/rss",
+        "https://tech.meituan.com/feed/",
+        "http://www.ruanyifeng.com/blog/atom.xml",
+        "https://feeds.appinn.com/appinns/",
+        "https://v2ex.com/feed/tab/tech.xml",
+        "https://www.cmooc.com/feed",
+        "http://www.sciencenet.cn/xml/blog.aspx?di=30",
+        "https://www.douban.com/feed/review/book",
+        "https://www.douban.com/feed/review/movie",
+        "https://www.geekpark.net/rss",
+        "http://www.ftchinese.com/rss/news",
+        "https://cn.nytimes.com/rss.html",
+        "https://hostloc.com/forum.php?mod=rss&fid=45&auth=389ec3vtQanmEuRoghE%2FpZPWnYCPmvwWgSa7RsfjbQ%2BJpA%2F6y6eHAx%2FKqtmPOg"
     ]
 }

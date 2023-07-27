@@ -9,9 +9,10 @@ FROM alpine
 
 COPY --from=builder /src/bin /app
 COPY --from=builder /src/index.html /app/index.html
+COPY --from=builder /src/static /app/static
 
 WORKDIR /app
 
 EXPOSE 8080
 
-ENTRYPOINT ["./ownrss"]
+ENTRYPOINT ["./rss-reader"]

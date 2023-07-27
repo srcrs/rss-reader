@@ -4,9 +4,10 @@ services:
   server:
     build:
       context: .
-    container_name: ownrss
+    container_name: rss-reader
     restart: always
     ports:
-      - "10060:8080"
+      - "8080:8080"
     volumes:
       - "$PWD/index.html:/app/index.html"
+      - "$PWD/db:/app/db"

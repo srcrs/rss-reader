@@ -4,7 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RSS Reader</title>
-  <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+  <!-- <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css"> -->
+  <link rel="stylesheet" href="static/index.css">
+  <link rel="icon" href="static/favicon.svg" type="image/x-icon">
   <style>
     body {
       font-family: "Avenir", Helvetica, Arial, sans-serif;
@@ -12,7 +14,7 @@
       -moz-osx-font-smoothing: grayscale;
       text-align: center;
       color: #2c3e50;
-      margin-top: 60px;
+      margin-top: 30px;
     }
 
     .card-header {
@@ -88,8 +90,11 @@
     </el-container>
   </div>
 
-  <script src="https://unpkg.com/vue@next"></script>
-  <script src="https://cdn.bootcdn.net/ajax/libs/element-plus/2.3.3/index.full.js"></script>
+  <!-- <script src="https://unpkg.com/vue@next"></script> -->
+  <script src="static/vue.global.js"></script>
+  
+  <!-- <script src="https://cdn.bootcdn.net/ajax/libs/element-plus/2.3.3/index.full.js"></script> -->
+  <script src="static/index.full.js"></script>
   <script>
     const app = Vue.createApp({
       data() {
@@ -98,9 +103,11 @@
         };
       },
       async created() {
-        const response = await fetch("/feeds");
-        const feeds = await response.json();
-        this.feeds = feeds;
+        const socket = new WebSocket("ws://localhost:8080/ws");
+        socket.onmessage = event => {
+          const feed = JSON.parse(event.data);
+          this.feeds.push(feed);
+        };
       },
     });
 

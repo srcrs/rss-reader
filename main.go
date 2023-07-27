@@ -1,31 +1,61 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
+	"fmt"
+	"io/ioutil"
 	"log"
 	"net/http"
 	"time"
 
-	"github.com/go-redis/redis/v8"
+	"github.com/dgraph-io/badger"
+	"github.com/gorilla/websocket"
 	"github.com/mmcdole/gofeed"
 )
 
-var ctx = context.Background()
-var rdb *redis.Client
+type Config struct {
+	Values []string `json:"values"`
+}
+
+var (
+	db       *badger.DB
+	rssUrls  Config
+	upgrader = websocket.Upgrader{}
+)
 
 func init() {
-	rdb = redis.NewClient(&redis.Options{
-		Addr:     "xx.xx.xx.xx:6399",
-		Password: "xxxxxx",
-		DB:       0,
-	})
+	// 读取配置文件
+	data, err := ioutil.ReadFile("config.json")
+	if err != nil {
+		panic(err)
+	}
+	// 解析JSON数据到Config结构体
+	err = json.Unmarshal(data, &rssUrls)
+	if err != nil {
+		panic(err)
+	}
+	initDB()
+}
+
+func initDB() error {
+	var err error
+	options := badger.DefaultOptions("db").WithTruncate(false)
+	db, err = badger.Open(options)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func main() {
 	go updateFeeds()
 	http.HandleFunc("/feeds", getFeedsHandler)
+	http.HandleFunc("/ws", wsHandler)
 	http.HandleFunc("/", serveHome)
+
+	//加载静态文件
+	fs := http.FileServer(http.Dir("static"))
+	http.Handle("/static/", http.StripPrefix("/static/", fs))
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
@@ -33,24 +63,36 @@ func serveHome(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, "index.html")
 }
 
-func updateFeeds() {
-	rssUrls := []string{
-		// 添加您的RSS订阅链接
-		"https://www.zhihu.com/rss",
-		"https://tech.meituan.com/feed/",
-		"http://www.ruanyifeng.com/blog/atom.xml",
-		"https://cn.wsj.com/zh-hans/rss",
-		"https://feeds.appinn.com/appinns/",
-		"https://v2ex.com/feed/tab/tech.xml",
-                "https://hostloc.com/forum.php?mod=rss&fid=45&auth=389ec3vtQanmEuRoghE%2FpZPWnYCPmvwWgSa7RsfjbQ%2BJpA%2F6y6eHAx%2FKqtmPOg",
+func wsHandler(w http.ResponseWriter, r *http.Request) {
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Printf("Upgrade failed: %v", err)
+		return
 	}
+	defer conn.Close()
 
+	for _, url := range rssUrls.Values {
+		feedJSON, err := get(url)
+		if err != nil {
+			log.Printf("Error getting feed from Redis: %v", err)
+			continue
+		}
+
+		err = conn.WriteMessage(websocket.TextMessage, []byte(feedJSON))
+		if err != nil {
+			log.Printf("Error sending message: %v", err)
+			continue
+		}
+	}
+}
+
+func updateFeeds() {
 	for {
-		for _, url := range rssUrls {
+		for _, url := range rssUrls.Values {
 			fp := gofeed.NewParser()
 			feed, err := fp.ParseURL(url)
 			if err != nil {
-				log.Printf("Error fetching feed: %v", err)
+				log.Printf("Error fetching feed: %v | %v", url, err)
 				continue
 			}
 
@@ -60,32 +102,23 @@ func updateFeeds() {
 				continue
 			}
 
-			err = rdb.Set(ctx, url, feedJSON, 0).Err()
+			err = update(url, string(feedJSON))
 			if err != nil {
 				log.Printf("Error saving feed to Redis: %v", err)
 			}
 		}
-		time.Sleep(10 * time.Minute)
+		log.Printf("update success")
+		time.Sleep(5 * time.Minute)
 	}
 }
 
 func getFeedsHandler(w http.ResponseWriter, r *http.Request) {
-	rssUrls := []string{
-		// 添加您的RSS订阅链接
-		"https://www.zhihu.com/rss",
-		"https://tech.meituan.com/feed/",
-		"http://www.ruanyifeng.com/blog/atom.xml",
-		"https://cn.wsj.com/zh-hans/rss",
-		"https://feeds.appinn.com/appinns/",
-		"https://v2ex.com/feed/tab/tech.xml",
-                "https://hostloc.com/forum.php?mod=rss&fid=45&auth=389ec3vtQanmEuRoghE%2FpZPWnYCPmvwWgSa7RsfjbQ%2BJpA%2F6y6eHAx%2FKqtmPOg",
-	}
 
-	feeds := make([]gofeed.Feed, 0, len(rssUrls))
-	for _, url := range rssUrls {
-		feedJSON, err := rdb.Get(ctx, url).Result()
+	feeds := make([]gofeed.Feed, 0, len(rssUrls.Values))
+	for _, url := range rssUrls.Values {
+		feedJSON, err := get(url)
 		if err != nil {
-			log.Printf("Error getting feed from Redis: %v", err)
+			log.Printf("Error getting feed from Redis: %v | %v", url, err)
 			continue
 		}
 
@@ -103,3 +136,35 @@ func getFeedsHandler(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(feeds)
 }
 
+func update(key, value string) error {
+	// 写入数据
+	if err := db.Update(func(txn *badger.Txn) error {
+		err := txn.Set([]byte(key), []byte(value))
+		return err
+	}); err != nil {
+		return err
+	}
+	return nil
+}
+
+func get(key string) (string, error) {
+	value := make([]byte, 0)
+	// 读取数据
+	if err := db.View(func(txn *badger.Txn) error {
+		if item, err := txn.Get([]byte(key)); err != nil {
+			return err
+		} else {
+			if value, err = item.ValueCopy(nil); err != nil {
+				return err
+			} else {
+				return nil
+			}
+		}
+	}); err != nil {
+		return "", err
+	}
+	if string(value) == "" {
+		return "", fmt.Errorf("person not found")
+	}
+	return string(value), nil
+}
