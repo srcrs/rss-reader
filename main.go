@@ -107,7 +107,6 @@ func updateFeeds() {
 				log.Printf("Error saving feed to Redis: %v", err)
 			}
 		}
-		log.Printf("update success")
 		time.Sleep(5 * time.Minute)
 	}
 }
