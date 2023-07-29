@@ -39,7 +39,7 @@ func init() {
 
 func initDB() error {
 	var err error
-	options := badger.DefaultOptions("db").WithTruncate(false)
+	options := badger.DefaultOptions("db").WithTruncate(true)
 	db, err = badger.Open(options)
 	if err != nil {
 		return err
