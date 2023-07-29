@@ -48,7 +48,7 @@ git clone https://github.com/srcrs/rss-reader
 进入rss-reader文件夹，运行项目
 
 ```bash
-docker-compose up -d rss-reader
+docker-compose up -d
 ```
 
 部署成功后，通过ip+端口号访问
