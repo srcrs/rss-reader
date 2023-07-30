@@ -52,3 +52,30 @@ docker-compose up -d
 ```
 
 部署成功后，通过ip+端口号访问
+
+# nginx反代
+
+```conf
+server {
+    listen 443 ssl;
+    server_name rss.lass.cc;
+    ssl_certificate  fullchain.cer;
+    ssl_certificate_key lass.cc.key;
+    location / {
+        proxy_pass  http://localhost:8080;
+    }
+    location /ws {
+        proxy_pass http://localhost:8080/ws;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "Upgrade";
+        proxy_set_header Host $host;
+    }
+}
+
+server {
+    listen 80;
+    server_name rss.lass.cc;
+    rewrite ^(.*)$ https://$host$1 permanent;
+}
+```
