@@ -87,6 +87,12 @@
           </el-col>
         </el-row>
       </el-main>
+      <el-footer>
+        <el-link href="" target="_blank">lastUpdate: {{ lastUpdateTime }}</el-link></br>
+        <el-link href="https://github.com/srcrs/rss-reader" target="_blank">rss-reader</el-link>
+        <span> | </span>
+        <el-link href="https://github.com/srcrs" target="_blank">By srcrs</el-link>
+      </el-footer>
     </el-container>
   </div>
 
@@ -100,6 +106,7 @@
       data() {
         return {
           feeds: [],
+          lastUpdateTime: '-',
         };
       },
       async mounted() {
@@ -107,9 +114,34 @@
         const socket = new WebSocket(protocol + window.location.host + "/ws");
         socket.onmessage = event => {
           const feed = JSON.parse(event.data);
-          this.feeds.push(feed);
+          const existingFeed = this.feeds.find(f => f.link === feed.link);
+          if (existingFeed) {
+            Object.assign(existingFeed, feed);
+          } else {
+            this.feeds.push(feed);
+          }
+          this.getCurrentTime()
         };
       },
+      beforeDestroy() {
+        // 在组件销毁前手动关闭 WebSocket 连接
+        this.socket.close();
+      },
+      methods: {
+        getCurrentTime() {
+          const date = new Date()
+          const year = date.getFullYear()
+          const month = this.formatTime(date.getMonth() + 1)
+          const day = this.formatTime(date.getDate())
+          const hours = this.formatTime(date.getHours())
+          const minutes = this.formatTime(date.getMinutes())
+          const seconds = this.formatTime(date.getSeconds())
+          this.lastUpdateTime = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+        },
+        formatTime(time) {
+          return time < 10 ? `0${time}` : time
+        }
+      }
     });
 
     app.use(ElementPlus);
