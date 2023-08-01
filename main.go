@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"log"
 	"net/http"
+	"sync"
 	"time"
 
 	"github.com/dgraph-io/badger"
@@ -23,6 +24,7 @@ var (
 	db       *badger.DB
 	rssUrls  Config
 	upgrader = websocket.Upgrader{}
+	connMu   sync.Mutex // 定义互斥锁
 )
 
 func init() {
@@ -75,10 +77,13 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 	if rssUrls.AutoUpdatePush > 0 {
 		go func() {
 			for {
+				connMu.Lock() // 加锁
 				if err := conn.WriteMessage(websocket.TextMessage, []byte("heartbeat")); err != nil {
 					log.Printf("heartbeat Write error: %v", err)
+					connMu.Unlock() // 解锁
 					return
 				}
+				connMu.Unlock() // 解锁
 				time.Sleep(time.Duration(10) * time.Second)
 			}
 		}()
@@ -90,13 +95,15 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 				log.Printf("Error getting feed from Redis: %v", err)
 				continue
 			}
-
+			connMu.Lock() // 加锁
 			err = conn.WriteMessage(websocket.TextMessage, []byte(feedJSON))
 			//错误直接关闭更新
 			if err != nil {
 				log.Printf("Error sending message or Connection closed: %v", err)
+				connMu.Unlock() // 解锁
 				return
 			}
+			connMu.Unlock() // 解锁
 		}
 		//如果未配置则不自动更新
 		if rssUrls.AutoUpdatePush == 0 {
