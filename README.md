@@ -25,13 +25,19 @@ RSS将信息聚合，曾寻找过一些RSS客户端，但觉得都太过于复�
         "https://www.douban.com/feed/review/book",
         "https://www.douban.com/feed/review/movie",
         "https://www.geekpark.net/rss",
-        "http://www.ftchinese.com/rss/news",
         "https://cn.nytimes.com/rss.html",
         "https://hostloc.com/forum.php?mod=rss&fid=45&auth=389ec3vtQanmEuRoghE%2FpZPWnYCPmvwWgSa7RsfjbQ%2BJpA%2F6y6eHAx%2FKqtmPOg"
-    ]
+    ],
+    "refresh": 6,
+    "isUpdatePush": true
 }
-
 ```
+
+名称 | 说明
+-|-
+values | rss订阅链接（必填）
+refresh | rss订阅更新时间间隔（必填）
+isUpdatePush | 是否开启自动刷新，默认为false，效果为前端(refresh+1)分钟自动更新页面信息（非必填）
 
 # 使用方式
 
