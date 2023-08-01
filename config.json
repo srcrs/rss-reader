@@ -10,8 +10,9 @@
         "https://www.douban.com/feed/review/book",
         "https://www.douban.com/feed/review/movie",
         "https://www.geekpark.net/rss",
-        "http://www.ftchinese.com/rss/news",
         "https://cn.nytimes.com/rss.html",
         "https://hostloc.com/forum.php?mod=rss&fid=45&auth=389ec3vtQanmEuRoghE%2FpZPWnYCPmvwWgSa7RsfjbQ%2BJpA%2F6y6eHAx%2FKqtmPOg"
-    ]
+    ],
+    "refresh": 6,
+    "isUpdatePush": true
 }
