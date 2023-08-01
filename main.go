@@ -14,9 +14,9 @@ import (
 )
 
 type Config struct {
-	Values       []string `json:"values"`
-	ReFresh      int      `json:"refresh"`
-	IsUpdatePush bool     `json:"isUpdatePush"`
+	Values         []string `json:"values"`
+	ReFresh        int      `json:"refresh"`
+	AutoUpdatePush int      `json:"autoUpdatePush"`
 }
 
 var (
@@ -88,10 +88,10 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		//如果未配置则不自动更新
-		if !rssUrls.IsUpdatePush {
+		if rssUrls.AutoUpdatePush == 0 {
 			return
 		}
-		time.Sleep(time.Duration(rssUrls.ReFresh+1) * time.Minute)
+		time.Sleep(time.Duration(rssUrls.AutoUpdatePush) * time.Minute)
 	}
 }
 
