@@ -14,7 +14,9 @@ import (
 )
 
 type Config struct {
-	Values []string `json:"values"`
+	Values       []string `json:"values"`
+	ReFresh      int      `json:"refresh"`
+	IsUpdatePush bool     `json:"isUpdatePush"`
 }
 
 var (
@@ -70,19 +72,26 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
+	for {
+		for _, url := range rssUrls.Values {
+			feedJSON, err := get(url)
+			if err != nil {
+				log.Printf("Error getting feed from Redis: %v", err)
+				continue
+			}
 
-	for _, url := range rssUrls.Values {
-		feedJSON, err := get(url)
-		if err != nil {
-			log.Printf("Error getting feed from Redis: %v", err)
-			continue
+			err = conn.WriteMessage(websocket.TextMessage, []byte(feedJSON))
+			//错误直接关闭更新
+			if err != nil {
+				log.Printf("Error sending message or Connection closed: %v", err)
+				return
+			}
 		}
-
-		err = conn.WriteMessage(websocket.TextMessage, []byte(feedJSON))
-		if err != nil {
-			log.Printf("Error sending message: %v", err)
-			continue
+		//如果未配置则不自动更新
+		if !rssUrls.IsUpdatePush {
+			return
 		}
+		time.Sleep(time.Duration(rssUrls.ReFresh+1) * time.Minute)
 	}
 }
 
@@ -107,7 +116,7 @@ func updateFeeds() {
 				log.Printf("Error saving feed to Redis: %v", err)
 			}
 		}
-		time.Sleep(5 * time.Minute)
+		time.Sleep(time.Duration(rssUrls.ReFresh) * time.Minute)
 	}
 }
 
