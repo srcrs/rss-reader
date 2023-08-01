@@ -113,6 +113,10 @@
         const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
         const socket = new WebSocket(protocol + window.location.host + "/ws");
         socket.onmessage = event => {
+          if (event.data === 'heartbeat') {
+            // 心跳消息，忽略处理
+            return;
+          }
           const feed = JSON.parse(event.data);
           const existingFeed = this.feeds.find(f => f.link === feed.link);
           if (existingFeed) {

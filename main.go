@@ -72,6 +72,17 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
+	if rssUrls.AutoUpdatePush > 0 {
+		go func() {
+			for {
+				if err := conn.WriteMessage(websocket.TextMessage, []byte("heartbeat")); err != nil {
+					log.Printf("heartbeat Write error: %v", err)
+					return
+				}
+				time.Sleep(time.Duration(10) * time.Second)
+			}
+		}()
+	}
 	for {
 		for _, url := range rssUrls.Values {
 			feedJSON, err := get(url)
