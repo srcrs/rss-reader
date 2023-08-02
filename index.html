@@ -9,20 +9,28 @@
   <link rel="icon" href="static/favicon.svg" type="image/x-icon">
   <style>
     body {
-      font-family: "Avenir", Helvetica, Arial, sans-serif;
+      font-family: 微软雅黑,"Avenir", Helvetica, Arial, sans-serif;
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       text-align: center;
       color: #2c3e50;
       margin-top: 30px;
+      background: #f7f7f7;
     }
 
     .card-header {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      font-size: 18px;
-      font-weight: bold;
+        font-size: 15px;
+        font-weight: bold;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        text-align: left;
+        margin-bottom: 10px;
+        background: linear-gradient(to bottom, #007f80, #007070);
+        color: white;
+        line-height: 2em;
+        border-radius: 6px;
+        padding: 0 0.5em;
     }
 
     .list-item {
@@ -33,14 +41,16 @@
     }
 
     .list-item-title {
-      display: block;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      flex-grow: 1;
-      text-align: left;
-      width: 100%;
-      margin-bottom: 10px;
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: left;
+        margin-bottom: 8px;
+        cursor: pointer;
+        color: #0060a0;
+        text-decoration: none;
+        padding: 0 0.5em;
     }
     .title-link {
       display: block;
@@ -54,12 +64,24 @@
       color: black;
       text-decoration: none;
     }
-
-    a:hover {
-      text-decoration: underline;
-    }
     .feed-col {
       margin-bottom: 20px;
+    }
+    .el-card.is-always-shadow{
+    box-shadow: none;
+    }
+    .el-card{
+        border: none;
+        background: none;
+    }
+    .el-link__inner{
+        display: inline;
+    }
+    *:hover{
+        text-decoration:none;
+    }
+    .el-card__body{
+        padding: 0;
     }
   </style>
 </head>
