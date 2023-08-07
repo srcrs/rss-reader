@@ -1,6 +1,7 @@
 package main
 
 import (
+	"embed"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -25,6 +26,13 @@ var (
 	rssUrls  Config
 	upgrader = websocket.Upgrader{}
 	connMu   sync.Mutex // 定义互斥锁
+
+	//go:embed static
+	dirStatic embed.FS
+	//go:embed index.html
+	fileIndex embed.FS
+
+	htmlContent []byte
 )
 
 func init() {
@@ -35,6 +43,11 @@ func init() {
 	}
 	// 解析JSON数据到Config结构体
 	err = json.Unmarshal(data, &rssUrls)
+	if err != nil {
+		panic(err)
+	}
+	// 读取 index.html 内容
+	htmlContent, err = fileIndex.ReadFile("index.html")
 	if err != nil {
 		panic(err)
 	}
@@ -58,13 +71,14 @@ func main() {
 	http.HandleFunc("/", serveHome)
 
 	//加载静态文件
-	fs := http.FileServer(http.Dir("static"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	fs := http.FileServer(http.FS(dirStatic))
+	http.Handle("/static/", fs)
 	log.Fatal(http.ListenAndServe(":8080", nil))
 }
 
 func serveHome(w http.ResponseWriter, r *http.Request) {
-	http.ServeFile(w, r, "index.html")
+	w.Header().Add("Content-Type", "text/html; charset=utf-8")
+	w.Write(htmlContent)
 }
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
