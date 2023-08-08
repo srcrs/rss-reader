@@ -57,6 +57,12 @@ git clone https://github.com/srcrs/rss-reader
 docker-compose up -d
 ```
 
+国内服务器将Dockerfile中取消下面注释使用 go mod 镜像
+```dockerfile
+#RUN go env -w GO111MODULE=on && \
+#    go env -w GOPROXY=https://goproxy.cn,direct
+```
+
 部署成功后，通过ip+端口号访问
 
 # nginx反代
