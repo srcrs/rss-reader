@@ -130,7 +130,7 @@
           };
           socket.onclose = event => {
             console.log("WebSocket closed. Reconnecting...");
-            setTimeout(connect, 60000);
+            setTimeout(connect, 120000);
           };
         };
         connect();
