@@ -3,14 +3,12 @@ package main
 import (
 	"embed"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"sync"
 	"time"
 
-	"github.com/dgraph-io/badger"
 	"github.com/gorilla/websocket"
 	"github.com/mmcdole/gofeed"
 )
@@ -22,10 +20,9 @@ type Config struct {
 }
 
 var (
-	db       *badger.DB
+	dbMap    sync.Map
 	rssUrls  Config
 	upgrader = websocket.Upgrader{}
-	connMu   sync.Mutex // 定义互斥锁
 
 	//go:embed static
 	dirStatic embed.FS
@@ -51,17 +48,6 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	initDB()
-}
-
-func initDB() error {
-	var err error
-	options := badger.DefaultOptions("db").WithTruncate(true)
-	db, err = badger.Open(options)
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func main() {
@@ -88,36 +74,19 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer conn.Close()
-	if rssUrls.AutoUpdatePush > 0 {
-		go func() {
-			for {
-				connMu.Lock() // 加锁
-				if err := conn.WriteMessage(websocket.TextMessage, []byte("heartbeat")); err != nil {
-					log.Printf("heartbeat Write error: %v", err)
-					connMu.Unlock() // 解锁
-					return
-				}
-				connMu.Unlock() // 解锁
-				time.Sleep(time.Duration(10) * time.Second)
-			}
-		}()
-	}
 	for {
 		for _, url := range rssUrls.Values {
-			feedJSON, err := get(url)
-			if err != nil {
-				log.Printf("Error getting feed from Redis: %v", err)
+			feedJSON, ok := dbMap.Load(url)
+			if !ok {
+				log.Printf("Error getting feed from db is null %v", url)
 				continue
 			}
-			connMu.Lock() // 加锁
-			err = conn.WriteMessage(websocket.TextMessage, []byte(feedJSON))
+			err = conn.WriteMessage(websocket.TextMessage, []byte(feedJSON.(string)))
 			//错误直接关闭更新
 			if err != nil {
 				log.Printf("Error sending message or Connection closed: %v", err)
-				connMu.Unlock() // 解锁
 				return
 			}
-			connMu.Unlock() // 解锁
 		}
 		//如果未配置则不自动更新
 		if rssUrls.AutoUpdatePush == 0 {
@@ -136,17 +105,16 @@ func updateFeeds() {
 				log.Printf("Error fetching feed: %v | %v", url, err)
 				continue
 			}
+			currentTime := time.Now()
+			formattedTime := currentTime.Format("2006-01-02 15:04:05")
+			feed.Custom = map[string]string{"lastupdate": formattedTime}
 
 			feedJSON, err := json.Marshal(feed)
 			if err != nil {
 				log.Printf("Error marshaling feed: %v", err)
 				continue
 			}
-
-			err = update(url, string(feedJSON))
-			if err != nil {
-				log.Printf("Error saving feed to Redis: %v", err)
-			}
+			dbMap.Store(url, string(feedJSON))
 		}
 		time.Sleep(time.Duration(rssUrls.ReFresh) * time.Minute)
 	}
@@ -156,15 +124,14 @@ func getFeedsHandler(w http.ResponseWriter, r *http.Request) {
 
 	feeds := make([]gofeed.Feed, 0, len(rssUrls.Values))
 	for _, url := range rssUrls.Values {
-		feedJSON, err := get(url)
-		if err != nil {
-			log.Printf("Error getting feed from Redis: %v | %v", url, err)
+		feedJSON, ok := dbMap.Load(url)
+		if !ok {
+			log.Printf("Error getting feed from db is null %v", url)
 			continue
 		}
 
 		var feed gofeed.Feed
-		err = json.Unmarshal([]byte(feedJSON), &feed)
-		if err != nil {
+		if err := json.Unmarshal([]byte(feedJSON.(string)), &feed); err != nil {
 			log.Printf("Error unmarshaling feed: %v", err)
 			continue
 		}
@@ -174,37 +141,4 @@ func getFeedsHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(feeds)
-}
-
-func update(key, value string) error {
-	// 写入数据
-	if err := db.Update(func(txn *badger.Txn) error {
-		err := txn.Set([]byte(key), []byte(value))
-		return err
-	}); err != nil {
-		return err
-	}
-	return nil
-}
-
-func get(key string) (string, error) {
-	value := make([]byte, 0)
-	// 读取数据
-	if err := db.View(func(txn *badger.Txn) error {
-		if item, err := txn.Get([]byte(key)); err != nil {
-			return err
-		} else {
-			if value, err = item.ValueCopy(nil); err != nil {
-				return err
-			} else {
-				return nil
-			}
-		}
-	}); err != nil {
-		return "", err
-	}
-	if string(value) == "" {
-		return "", fmt.Errorf("person not found")
-	}
-	return string(value), nil
 }
