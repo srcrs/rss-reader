@@ -8,6 +8,4 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - "$PWD/index.html:/app/index.html"
-      - "$PWD/db:/app/db"
       - "$PWD/config.json:/app/config.json"
