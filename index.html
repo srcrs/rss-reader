@@ -137,7 +137,6 @@
             if (socket.readyState === WebSocket.OPEN) {
               socket.send("heartbeat");
             }
-            console.log(socket.readyState);
           };
           setInterval(sendHeartbeat, 120000);
         };
