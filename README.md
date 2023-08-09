@@ -25,11 +25,10 @@ RSS将信息聚合，曾寻找过一些RSS客户端，但觉得都太过于复�
         "https://www.douban.com/feed/review/book",
         "https://www.douban.com/feed/review/movie",
         "https://www.geekpark.net/rss",
-        "https://cn.nytimes.com/rss.html",
         "https://hostloc.com/forum.php?mod=rss&fid=45&auth=389ec3vtQanmEuRoghE%2FpZPWnYCPmvwWgSa7RsfjbQ%2BJpA%2F6y6eHAx%2FKqtmPOg"
     ],
     "refresh": 6,
-    "autoUpdatePush": 1
+    "autoUpdatePush": 7
 }
 ```
 
@@ -67,6 +66,8 @@ docker-compose up -d
 
 # nginx反代
 
+这里需要注意/ws，若不设置proxy_read_timeout参数，则默认1分钟断开。
+
 ```conf
 server {
     listen 443 ssl;
@@ -82,6 +83,7 @@ server {
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection "Upgrade";
         proxy_set_header Host $host;
+        proxy_read_timeout 300s;
     }
 }
 
