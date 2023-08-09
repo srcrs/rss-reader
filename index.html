@@ -130,8 +130,16 @@
           };
           socket.onclose = event => {
             console.log("WebSocket closed. Reconnecting...");
-            setTimeout(connect, 120000);
+            setTimeout(connect, 300000);
           };
+          // Send heartbeat message every 120 seconds
+          const sendHeartbeat = () => {
+            if (socket.readyState === WebSocket.OPEN) {
+              socket.send("heartbeat");
+            }
+            console.log(socket.readyState);
+          };
+          setInterval(sendHeartbeat, 120000);
         };
         connect();
       },
