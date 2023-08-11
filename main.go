@@ -97,27 +97,34 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func updateFeeds() {
+	var (
+		tick          = time.Tick(time.Duration(rssUrls.ReFresh) * time.Minute)
+		fp            = gofeed.NewParser()
+		formattedTime = time.Now().Format("2006-01-02 15:04:05")
+	)
 	for {
 		for _, url := range rssUrls.Values {
-			fp := gofeed.NewParser()
-			feed, err := fp.ParseURL(url)
-			if err != nil {
-				log.Printf("Error fetching feed: %v | %v", url, err)
-				continue
-			}
-			currentTime := time.Now()
-			formattedTime := currentTime.Format("2006-01-02 15:04:05")
-			feed.Custom = map[string]string{"lastupdate": formattedTime}
-
-			feedJSON, err := json.Marshal(feed)
-			if err != nil {
-				log.Printf("Error marshaling feed: %v", err)
-				continue
-			}
-			dbMap.Store(url, string(feedJSON))
+			go updateFeed(fp, url, formattedTime)
 		}
-		time.Sleep(time.Duration(rssUrls.ReFresh) * time.Minute)
+		<-tick
 	}
+}
+
+func updateFeed(fp *gofeed.Parser, url, formattedTime string) {
+	feed, err := fp.ParseURL(url)
+	if err != nil {
+		log.Printf("Error fetching feed: %v | %v", url, err)
+		return
+	}
+
+	feed.Custom = map[string]string{"lastupdate": formattedTime}
+
+	feedJSON, err := json.Marshal(feed)
+	if err != nil {
+		log.Printf("Error marshaling feed: %v", err)
+		return
+	}
+	dbMap.Store(url, string(feedJSON))
 }
 
 func getFeedsHandler(w http.ResponseWriter, r *http.Request) {
