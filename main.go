@@ -20,9 +20,10 @@ type Config struct {
 }
 
 var (
-	dbMap    sync.Map
+	dbMap    map[string]feed
 	rssUrls  Config
 	upgrader = websocket.Upgrader{}
+	lock     sync.RWMutex
 
 	//go:embed static
 	dirStatic embed.FS
@@ -48,6 +49,8 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	dbMap = make(map[string]feed)
 }
 
 func main() {
@@ -73,15 +76,24 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Upgrade failed: %v", err)
 		return
 	}
+
 	defer conn.Close()
 	for {
 		for _, url := range rssUrls.Values {
-			feedJSON, ok := dbMap.Load(url)
+			lock.RLock()
+			cache, ok := dbMap[url]
+			lock.RUnlock()
 			if !ok {
 				log.Printf("Error getting feed from db is null %v", url)
 				continue
 			}
-			err = conn.WriteMessage(websocket.TextMessage, []byte(feedJSON.(string)))
+			data, err := json.Marshal(cache)
+			if err != nil {
+				log.Printf("json marshal failure: %s", err.Error())
+				continue
+			}
+
+			err = conn.WriteMessage(websocket.TextMessage, data)
 			//错误直接关闭更新
 			if err != nil {
 				log.Printf("Error sending message or Connection closed: %v", err)
@@ -111,39 +123,41 @@ func updateFeeds() {
 }
 
 func updateFeed(fp *gofeed.Parser, url, formattedTime string) {
-	feed, err := fp.ParseURL(url)
+	result, err := fp.ParseURL(url)
 	if err != nil {
 		log.Printf("Error fetching feed: %v | %v", url, err)
 		return
 	}
-
-	feed.Custom = map[string]string{"lastupdate": formattedTime}
-
-	feedJSON, err := json.Marshal(feed)
-	if err != nil {
-		log.Printf("Error marshaling feed: %v", err)
-		return
+	customFeed := feed{
+		Title:  result.Title,
+		Link:   result.Link,
+		Custom: map[string]string{"lastupdate": formattedTime},
+		Items:  make([]item, 0, len(result.Items)),
 	}
-	dbMap.Store(url, string(feedJSON))
+	for _, v := range result.Items {
+		customFeed.Items = append(customFeed.Items, item{
+			Link:  v.Link,
+			Title: v.Title,
+			Description: v.Description,
+		})
+	}
+	lock.Lock()
+	defer lock.Unlock()
+	dbMap[url] = customFeed
 }
 
 func getFeedsHandler(w http.ResponseWriter, r *http.Request) {
-
-	feeds := make([]gofeed.Feed, 0, len(rssUrls.Values))
+	feeds := make([]feed, 0, len(rssUrls.Values))
 	for _, url := range rssUrls.Values {
-		feedJSON, ok := dbMap.Load(url)
+		lock.RLock()
+		cache, ok := dbMap[url]
+		lock.RUnlock()
 		if !ok {
 			log.Printf("Error getting feed from db is null %v", url)
 			continue
 		}
 
-		var feed gofeed.Feed
-		if err := json.Unmarshal([]byte(feedJSON.(string)), &feed); err != nil {
-			log.Printf("Error unmarshaling feed: %v", err)
-			continue
-		}
-
-		feeds = append(feeds, feed)
+		feeds = append(feeds, cache)
 	}
 
 	w.Header().Set("Content-Type", "application/json")
