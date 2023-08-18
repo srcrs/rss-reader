@@ -110,11 +110,11 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 
 func updateFeeds() {
 	var (
-		tick          = time.Tick(time.Duration(rssUrls.ReFresh) * time.Minute)
-		fp            = gofeed.NewParser()
-		formattedTime = time.Now().Format("2006-01-02 15:04:05")
+		tick = time.Tick(time.Duration(rssUrls.ReFresh) * time.Minute)
+		fp   = gofeed.NewParser()
 	)
 	for {
+		formattedTime := time.Now().Format("2006-01-02 15:04:05")
 		for _, url := range rssUrls.Values {
 			go updateFeed(fp, url, formattedTime)
 		}
