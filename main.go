@@ -128,6 +128,13 @@ func updateFeed(fp *gofeed.Parser, url, formattedTime string) {
 		log.Printf("Error fetching feed: %v | %v", url, err)
 		return
 	}
+	//feed内容无更新时无需更新缓存
+	if cache, ok := dbMap[url]; ok &&
+		len(result.Items) > 0 &&
+		len(cache.Items) > 0 &&
+		result.Items[0].Link == cache.Items[0].Link {
+		return
+	}
 	customFeed := feed{
 		Title:  result.Title,
 		Link:   result.Link,
@@ -136,8 +143,8 @@ func updateFeed(fp *gofeed.Parser, url, formattedTime string) {
 	}
 	for _, v := range result.Items {
 		customFeed.Items = append(customFeed.Items, item{
-			Link:  v.Link,
-			Title: v.Title,
+			Link:        v.Link,
+			Title:       v.Title,
 			Description: v.Description,
 		})
 	}
