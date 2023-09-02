@@ -66,7 +66,7 @@ docker-compose up -d
 
 # nginx反代
 
-这里需要注意/ws，若不设置proxy_read_timeout参数，则默认1分钟断开。
+这里需要注意/ws，若不设置proxy_read_timeout参数，则默认1分钟断开。静态文件增加gzip可以大幅压缩网络传输数据
 
 ```conf
 server {
@@ -74,6 +74,8 @@ server {
     server_name rss.lass.cc;
     ssl_certificate  fullchain.cer;
     ssl_certificate_key lass.cc.key;
+    gzip on;
+    gzip_types text/plain text/css application/json application/javascript text/xml application/xml application/xml+rss text/javascript;
     location / {
         proxy_pass  http://localhost:8080;
     }
