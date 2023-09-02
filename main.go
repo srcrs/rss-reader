@@ -82,7 +82,7 @@ func tplHandler(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	// 加载模板文件
-	tmpl, err := tmplInstance.Funcs(funcMap).ParseFiles("index.html")
+	tmpl, err := tmplInstance.Funcs(funcMap).ParseFS(fileIndex, "index.html")
 	if err != nil {
 		log.Println("模板加载错误:", err)
 		return
