@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"encoding/json"
+	"html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -57,7 +58,8 @@ func main() {
 	go updateFeeds()
 	http.HandleFunc("/feeds", getFeedsHandler)
 	http.HandleFunc("/ws", wsHandler)
-	http.HandleFunc("/", serveHome)
+	// http.HandleFunc("/", serveHome)
+	http.HandleFunc("/", tplHandler)
 
 	//加载静态文件
 	fs := http.FileServer(http.FS(dirStatic))
@@ -68,6 +70,38 @@ func main() {
 func serveHome(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Content-Type", "text/html; charset=utf-8")
 	w.Write(htmlContent)
+}
+
+func tplHandler(w http.ResponseWriter, r *http.Request) {
+	// 创建一个新的模板，并设置自定义分隔符为<< >>，避免与Vue的语法冲突
+	tmplInstance := template.New("index.html").Delims("<<", ">>")
+	//添加加法函数计数
+	funcMap := template.FuncMap{
+		"inc": func(i int) int {
+			return i + 1
+		},
+	}
+	// 加载模板文件
+	tmpl, err := tmplInstance.Funcs(funcMap).ParseFiles("index.html")
+	if err != nil {
+		log.Println("模板加载错误:", err)
+		return
+	}
+
+	// 定义一个数据对象
+	data := struct {
+		Keywords    string
+		RssDataList []feed
+	}{
+		Keywords:    getKeywords(),
+		RssDataList: getFeeds(),
+	}
+
+	// 渲染模板并将结果写入响应
+	err = tmpl.Execute(w, data)
+	if err != nil {
+		log.Println("模板渲染错误:", err)
+	}
 }
 
 func wsHandler(w http.ResponseWriter, r *http.Request) {
@@ -153,7 +187,8 @@ func updateFeed(fp *gofeed.Parser, url, formattedTime string) {
 	dbMap[url] = customFeed
 }
 
-func getFeedsHandler(w http.ResponseWriter, r *http.Request) {
+//获取feeds列表
+func getFeeds() []feed {
 	feeds := make([]feed, 0, len(rssUrls.Values))
 	for _, url := range rssUrls.Values {
 		lock.RLock()
@@ -166,6 +201,30 @@ func getFeedsHandler(w http.ResponseWriter, r *http.Request) {
 
 		feeds = append(feeds, cache)
 	}
+	return feeds
+}
+
+//获取关键词也就是title
+//获取feeds列表
+func getKeywords() string {
+	words := ""
+	for _, url := range rssUrls.Values {
+		lock.RLock()
+		cache, ok := dbMap[url]
+		lock.RUnlock()
+		if !ok {
+			log.Printf("Error getting feed from db is null %v", url)
+			continue
+		}
+		if cache.Title != "" {
+			words += cache.Title + ","
+		}
+	}
+	return words
+}
+
+func getFeedsHandler(w http.ResponseWriter, r *http.Request) {
+	feeds := getFeeds()
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(feeds)

@@ -1,8 +1,12 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>RSS Reader</title>
+  <meta name="description" content='RSS Reader，一个将订阅信息聚合展示的开源web工具，便于了解近期关注的信息，同时页面数据数据也实现了自动刷新。'>
+  <meta name="keywords" content="<< .Keywords >>">
+  <meta name="anthor" content="srcrs">
   <!-- <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css"> -->
   <link rel="stylesheet" href="static/index.min.css">
   <link rel="icon" href="static/favicon.svg" type="image/x-icon">
@@ -60,37 +64,67 @@
     }
   </style>
 </head>
+
 <body>
   <div id="app">
     <el-container>
       <el-header>
         <h1>RSS Reader</h1>
       </el-header>
-      <el-main 
-        v-loading.fullscreen.lock="fullscreenLoading"
-        element-loading-text="拼命加载中"
-      >
+      <el-main v-loading.fullscreen.lock="fullscreenLoading" element-loading-text="拼命加载中">
         <el-row :gutter="20">
-          <el-col :xs="24" :sm="12" :md="8" :lg="6" v-for="(feed, index) in feeds" :key="index" class="feed-col">
-            <el-card class="box-card">
-              <div slot="header" class="card-header">
-                <span>{{ feed.title }}</span>
-              </div>
-              <el-scrollbar style="height: 300px;">
-                <el-list v-for="(item, i) in feed.items" :key="i">
-                  <el-list-item>
-                    <div class="list-item-title">
-                      <span>{{ i+1 }}. </span>
-                      <el-link  :href="item.link" target="_blank" :title="item.title">{{ item.title }}</el-link>
-                    </div>
-                  </el-list-item>
-                </el-list>
-              </el-scrollbar>
-              <div slot="footer" class="card-footer" style="height: 10px;">
-                <time class="time">{{ feed.custom.lastupdate }}</time>
-              </div>
-            </el-card>
-          </el-col>
+          << range $index, $feed :=.RssDataList >>
+            <el-col v-if="showSEOFlag" :xs="24" :sm="12" :md="8" :lg="6" :key="index" class="feed-col">
+              <el-card class="box-card">
+                <div slot="header" class="card-header">
+                  <span>
+                    << $feed.Title >>
+                  </span>
+                </div>
+                <el-scrollbar style="height: 300px;">
+                  << range $i, $item :=$feed.Items >>
+                    <el-list key="<< $i >>">
+                      <el-list-item>
+                        <div class="list-item-title">
+                          <span>
+                            << inc $i >>.
+                          </span>
+                          <el-link href="<< $item.Link >>" target="_blank" title="<< $item.Title >>">
+                            << $item.Title >>
+                          </el-link>
+                        </div>
+                      </el-list-item>
+                    </el-list>
+                    << end >>
+                </el-scrollbar>
+                <div slot="footer" class="card-footer" style="height: 10px;">
+                  <time class="time">
+                    << $feed.Custom.lastupdate >>
+                  </time>
+                </div>
+              </el-card>
+            </el-col>
+            << end>>
+              <el-col :xs="24" :sm="12" :md="8" :lg="6" v-for="(feed, index) in feeds" :key="index" class="feed-col">
+                <el-card class="box-card">
+                  <div slot="header" class="card-header">
+                    <span>{{ feed.title }}</span>
+                  </div>
+                  <el-scrollbar style="height: 300px;">
+                    <el-list v-for="(item, i) in feed.items" :key="i">
+                      <el-list-item>
+                        <div class="list-item-title">
+                          <span>{{ i+1 }}. </span>
+                          <el-link :href="item.link" target="_blank" :title="item.title">{{ item.title }}</el-link>
+                        </div>
+                      </el-list-item>
+                    </el-list>
+                  </el-scrollbar>
+                  <div slot="footer" class="card-footer" style="height: 10px;">
+                    <time class="time">{{ feed.custom.lastupdate }}</time>
+                  </div>
+                </el-card>
+              </el-col>
         </el-row>
       </el-main>
       <el-footer>
@@ -103,7 +137,7 @@
 
   <!-- <script src="https://unpkg.com/vue@next"></script> -->
   <script src="static/vue.global.prod.js"></script>
-  
+
   <!-- <script src="https://cdn.bootcdn.net/ajax/libs/element-plus/2.3.3/index.full.js"></script> -->
   <script src="static/index.full.min.js"></script>
   <script>
@@ -111,8 +145,12 @@
       data() {
         return {
           feeds: [],
+          showSEOFlag: true,
           fullscreenLoading: true,
         };
+      },
+      async created() {
+        this.fullscreenLoading = false;
       },
       async mounted() {
         const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
@@ -126,7 +164,7 @@
             } else {
               this.feeds.push(feed);
             }
-            this.fullscreenLoading = false;
+            this.showSEOFlag = false;
           };
           socket.onclose = event => {
             console.log("WebSocket closed. Reconnecting...");
