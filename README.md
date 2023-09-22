@@ -38,6 +38,15 @@ values | rss订阅链接（必填）
 refresh | rss订阅更新时间间隔，单位分钟（必填）
 autoUpdatePush | 自动刷新间隔，默认为0，不开启。效果为前端每autoUpdatePush分钟自动更新页面信息，单位分钟（非必填）
 
+在程序运行期间，添加新的订阅链接以后可以通过发送指定信号 `kill -SIGUSR1 $(pidof ssh-reader)` 通知程序重新加载配置文件。
+然后刷新网页或者等待服务端下次下发即可。
+
+Docker 可以使用 `docker exec ssh-reader kill -SIGUSR1 $(pidof ssh-reader)` 发送信号。
+
+对于使用 systemd 的系统，也可以通过 [systemd.path](https://www.freedesktop.org/software/systemd/man/systemd.path.html) 代替手动发送信号。
+
+重新加载配置文件中订阅链接的特性目前暂时不支持 windows 系统。
+
 # 使用方式
 
 ## Docker部署
