@@ -4,21 +4,17 @@ import (
 	"embed"
 	"encoding/json"
 	"html/template"
-	"io/ioutil"
 	"log"
 	"net/http"
+	"os"
+	"os/signal"
 	"sync"
+	"syscall"
 	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/mmcdole/gofeed"
 )
-
-type Config struct {
-	Values         []string `json:"values"`
-	ReFresh        int      `json:"refresh"`
-	AutoUpdatePush int      `json:"autoUpdatePush"`
-}
 
 var (
 	dbMap    map[string]feed
@@ -32,19 +28,16 @@ var (
 	fileIndex embed.FS
 
 	htmlContent []byte
+
+	fp = gofeed.NewParser()
 )
 
 func init() {
-	// 读取配置文件
-	data, err := ioutil.ReadFile("config.json")
+	conf, err := parseConf()
 	if err != nil {
 		panic(err)
 	}
-	// 解析JSON数据到Config结构体
-	err = json.Unmarshal(data, &rssUrls)
-	if err != nil {
-		panic(err)
-	}
+	rssUrls = conf
 	// 读取 index.html 内容
 	htmlContent, err = fileIndex.ReadFile("index.html")
 	if err != nil {
@@ -56,6 +49,7 @@ func init() {
 
 func main() {
 	go updateFeeds()
+	go handleSignal()
 	http.HandleFunc("/feeds", getFeedsHandler)
 	http.HandleFunc("/ws", wsHandler)
 	// http.HandleFunc("/", serveHome)
@@ -145,18 +139,17 @@ func wsHandler(w http.ResponseWriter, r *http.Request) {
 func updateFeeds() {
 	var (
 		tick = time.Tick(time.Duration(rssUrls.ReFresh) * time.Minute)
-		fp   = gofeed.NewParser()
 	)
 	for {
 		formattedTime := time.Now().Format("2006-01-02 15:04:05")
 		for _, url := range rssUrls.Values {
-			go updateFeed(fp, url, formattedTime)
+			go updateFeed(url, formattedTime)
 		}
 		<-tick
 	}
 }
 
-func updateFeed(fp *gofeed.Parser, url, formattedTime string) {
+func updateFeed(url, formattedTime string) {
 	result, err := fp.ParseURL(url)
 	if err != nil {
 		log.Printf("Error fetching feed: %v | %v", url, err)
@@ -228,4 +221,24 @@ func getFeedsHandler(w http.ResponseWriter, r *http.Request) {
 
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(feeds)
+}
+
+func handleSignal() {
+	ch := make(chan os.Signal)
+	signal.Notify(ch, syscall.SIGUSR1)
+	defer close(ch)
+
+	for {
+		<-ch
+		conf, err := parseConf()
+		if err != nil {
+			continue
+		}
+		increment := rssUrls.getIncrement(conf)
+		rssUrls = conf
+		now := time.Now().Format("2006-01-02 15:04:05")
+		for _, item := range increment {
+			go updateFeed(item, now)
+		}
+	}
 }
