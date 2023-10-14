@@ -2,10 +2,11 @@ package utils
 
 import (
 	"log"
-	"os"
 	"rss-reader/globals"
 	"rss-reader/models"
 	"time"
+
+	"github.com/fsnotify/fsnotify"
 )
 
 func UpdateFeeds() {
@@ -70,33 +71,47 @@ func GetFeeds() []models.Feed {
 }
 
 func WatchConfigFileChanges(filePath string) {
-	// 获取初始文件信息
-	initialFileInfo, err := os.Stat(filePath)
+	// 创建一个新的监控器
+	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Println("无法获取文件信息:", err)
-		return
+		log.Fatal(err)
+	}
+	defer watcher.Close()
+
+	// 添加要监控的文件
+	err = watcher.Add(filePath)
+	if err != nil {
+		log.Fatal(err)
 	}
 
-	for {
-		// 每隔一段时间检查文件是否有变化
-		time.Sleep(7 * time.Second)
-
-		// 获取最新的文件信息
-		currentFileInfo, err := os.Stat(filePath)
-		if err != nil {
-			log.Println("无法获取文件信息:", err)
-			return
-		}
-
-		// 检查文件的修改时间是否有变化
-		if currentFileInfo.ModTime() != initialFileInfo.ModTime() {
-			log.Println("文件已修改")
-			initialFileInfo = currentFileInfo
-			globals.Init()
-			formattedTime := time.Now().Format("2006-01-02 15:04:05")
-			for _, url := range globals.RssUrls.Values {
-				go UpdateFeed(url, formattedTime)
+	// 启动一个 goroutine 来处理文件变化事件
+	go func() {
+		for {
+			time.Sleep(7 * time.Second)
+			select {
+			case event, ok := <-watcher.Events:
+				if !ok {
+					log.Println("通道关闭1")
+					return
+				}
+				if event.Op&fsnotify.Write == fsnotify.Write {
+					log.Println("文件已修改")
+					globals.Init()
+					formattedTime := time.Now().Format("2006-01-02 15:04:05")
+					for _, url := range globals.RssUrls.Values {
+						go UpdateFeed(url, formattedTime)
+					}
+				}
+			case err, ok := <-watcher.Errors:
+				if !ok {
+					log.Println("通道关闭2")
+					return
+				}
+				log.Println("错误:", err)
+				return
 			}
 		}
-	}
+	}()
+
+	select {}
 }
