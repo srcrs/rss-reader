@@ -16,6 +16,10 @@
 
 - 简洁的页面布局，可以查看每个订阅链接最后更新时间
 
+- 支持夜间模式
+
+- config.json配置文件支持热更新
+
 2023年7月28日，进行了界面改版和升级
 
 ![](pc.png)
@@ -42,7 +46,9 @@
         "https://hostloc.com/forum.php?mod=rss&fid=45&auth=389ec3vtQanmEuRoghE%2FpZPWnYCPmvwWgSa7RsfjbQ%2BJpA%2F6y6eHAx%2FKqtmPOg"
     ],
     "refresh": 6,
-    "autoUpdatePush": 7
+    "autoUpdatePush": 7,
+    "nightStartTime": "06:30:00",
+    "nightEndTime": "19:30:00"
 }
 ```
 
@@ -51,6 +57,8 @@
 values | rss订阅链接（必填）
 refresh | rss订阅更新时间间隔，单位分钟（必填）
 autoUpdatePush | 自动刷新间隔，默认为0，不开启。效果为前端每autoUpdatePush分钟自动更新页面信息，单位分钟（非必填）
+nightStartTime | 日间开始时间 ，如 06:30:00
+nightEndTime | 日间结束时间，如 19:30:00
 
 # 使用方式
 
