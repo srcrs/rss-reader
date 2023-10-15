@@ -169,17 +169,28 @@
             }
             this.showSEOFlag = false;
           };
+          const reloadHtml = () => {
+            if (socket.readyState === WebSocket.CLOSED || socket.readyState === WebSocket.CLOSING) {
+              if (document.visibilityState === 'visible') {
+                // 刷新网页
+                console.log("reload...")
+                location.reload();
+              }
+            }
+          }
           socket.onclose = event => {
             console.log("WebSocket closed. Reconnecting...");
-            setTimeout(connect, 300000);
+            setInterval(reloadHtml, 3000);
           };
           // Send heartbeat message every 120 seconds
           const sendHeartbeat = () => {
             if (socket.readyState === WebSocket.OPEN) {
               socket.send("heartbeat");
+            } else if (socket.readyState === WebSocket.CLOSED || socket.readyState === WebSocket.CLOSING) {
+              reloadHtml()
             }
           };
-          setInterval(sendHeartbeat, 120000);
+          setInterval(sendHeartbeat, 60000);
         };
         connect();
       },
