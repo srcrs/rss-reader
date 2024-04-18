@@ -180,7 +180,11 @@
           }
           socket.onclose = event => {
             console.log("WebSocket closed. Reconnecting...");
-            setInterval(reloadHtml, 3000);
+            // 使用媒体查询判断设备类型
+            const isMobile = window.matchMedia('(max-width: 767px)').matches;
+            if (!isMobile) {
+              setInterval(reloadHtml, 3000);
+            }
           };
           // Send heartbeat message every 120 seconds
           const sendHeartbeat = () => {
