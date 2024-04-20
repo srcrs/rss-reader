@@ -64,13 +64,15 @@ func tplHandler(w http.ResponseWriter, r *http.Request) {
 
 	// 定义一个数据对象
 	data := struct {
-		Keywords    string
-		RssDataList []models.Feed
-		DarkMode    bool
+		Keywords       string
+		RssDataList    []models.Feed
+		DarkMode       bool
+		AutoUpdatePush int
 	}{
-		Keywords:    getKeywords(),
-		RssDataList: utils.GetFeeds(),
-		DarkMode:    darkMode,
+		Keywords:       getKeywords(),
+		RssDataList:    utils.GetFeeds(),
+		DarkMode:       darkMode,
+		AutoUpdatePush: globals.RssUrls.AutoUpdatePush,
 	}
 
 	// 渲染模板并将结果写入响应
