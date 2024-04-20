@@ -72,7 +72,13 @@
   <div id="app">
     <el-container>
       <el-header>
-        <h1>RSS Reader</h1>
+        <h1>
+          RSS Reader
+          << if gt .AutoUpdatePush 0 >>
+            <br/>
+            <span>{{ countdown }} s</span>
+          << end >>
+        </h1>
       </el-header>
       <el-main v-loading.fullscreen.lock="fullscreenLoading" element-loading-text="拼命加载中">
         <el-row :gutter="20">
@@ -150,6 +156,8 @@
           feeds: [],
           showSEOFlag: true,
           fullscreenLoading: true,
+          countdown: 60,
+          autoUpdatePush: << .AutoUpdatePush >>,
         };
       },
       async created() {
@@ -159,6 +167,8 @@
         const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
         const connect = () => {
           const socket = new WebSocket(protocol + window.location.host + "/ws");
+          // 使用媒体查询判断设备类型
+          const isMobile = window.matchMedia('(max-width: 767px)').matches;
           socket.onmessage = event => {
             const feed = JSON.parse(event.data);
             const existingFeed = this.feeds.find(f => f.link === feed.link);
@@ -179,14 +189,12 @@
             }
           }
           socket.onclose = event => {
-            console.log("WebSocket closed. Reconnecting...");
-            // 使用媒体查询判断设备类型
-            const isMobile = window.matchMedia('(max-width: 767px)').matches;
-            if (!isMobile) {
+            if (!isMobile && this.autoUpdatePush > 0) {
+              console.log("WebSocket closed. Reconnecting...");
               setInterval(reloadHtml, 3000);
             }
           };
-          // Send heartbeat message every 120 seconds
+          // Send heartbeat message every 60 seconds
           const sendHeartbeat = () => {
             if (socket.readyState === WebSocket.OPEN) {
               socket.send("heartbeat");
@@ -194,7 +202,16 @@
               reloadHtml()
             }
           };
-          setInterval(sendHeartbeat, 60000);
+          if (!isMobile && this.autoUpdatePush > 0) {
+            setInterval(sendHeartbeat, 60000);
+            setInterval(() => {
+              if (this.countdown > 0) {
+                this.countdown--;
+              } else {
+                this.countdown = 60;
+              }
+            }, 1000);
+          }
         };
         connect();
       },
