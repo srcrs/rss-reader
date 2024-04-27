@@ -75,8 +75,7 @@
         <h1>
           RSS Reader
           << if gt .AutoUpdatePush 0 >>
-            <br/>
-            <span>{{ countdown }} s</span>
+            <span v-show="isPc"><br/>{{ countdown }} s</span>
           << end >>
         </h1>
       </el-header>
@@ -157,18 +156,19 @@
           showSEOFlag: true,
           fullscreenLoading: true,
           countdown: 60,
+          isPc: true,
           autoUpdatePush: << .AutoUpdatePush >>,
         };
       },
       async created() {
         this.fullscreenLoading = false;
+        // 使用媒体查询判断设备类型
+        this.isPc = !window.matchMedia('(max-width: 767px)').matches;
       },
       async mounted() {
         const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
         const connect = () => {
           const socket = new WebSocket(protocol + window.location.host + "/ws");
-          // 使用媒体查询判断设备类型
-          const isMobile = window.matchMedia('(max-width: 767px)').matches;
           socket.onmessage = event => {
             const feed = JSON.parse(event.data);
             const existingFeed = this.feeds.find(f => f.link === feed.link);
@@ -189,7 +189,7 @@
             }
           }
           socket.onclose = event => {
-            if (!isMobile && this.autoUpdatePush > 0) {
+            if (this.isPc && this.autoUpdatePush > 0) {
               console.log("WebSocket closed. Reconnecting...");
               setInterval(reloadHtml, 3000);
             }
@@ -202,7 +202,7 @@
               reloadHtml()
             }
           };
-          if (!isMobile && this.autoUpdatePush > 0) {
+          if (this.isPc && this.autoUpdatePush > 0) {
             setInterval(sendHeartbeat, 60000);
             setInterval(() => {
               if (this.countdown > 0) {
