@@ -37,7 +37,7 @@ func UpdateFeed(url, formattedTime string) {
 	}
 	customFeed := models.Feed{
 		Title:  result.Title,
-		Link:   result.Link,
+		Link:   url,
 		Custom: map[string]string{"lastupdate": formattedTime},
 		Items:  make([]models.Item, 0, len(result.Items)),
 	}
